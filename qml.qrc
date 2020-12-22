@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+		<file>eLibrary.png</file>
+		<file>crossedLine.png</file>
+		<file>noBook.png</file>
+		<file>emptyStar.png</file>
+		<file>yellowStar.png</file>
+		<file>search.png</file>
+    </qresource>
+</RCC>
