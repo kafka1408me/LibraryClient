@@ -3,7 +3,11 @@ import QtQuick.Controls 2.6  // для ApplicationWindow
 import QtWebSockets 1.1      // вебсокет
 
 import codes.namespace 1.0   // коды сообщений, которыми обмениваются сервер и клиент
-//import "qrc:/model.js" as Books
+import "qrc:/model.js" as Books
+
+import SortFilterProxyModel 0.2
+
+import mymodel.Books 1.0
 
 
 ApplicationWindow{
@@ -22,10 +26,28 @@ ApplicationWindow{
 
     readonly property int headerH: 50
 
-    readonly property bool test: false
+    readonly property bool test: false  // ДЛЯ ТЕСТА false
     property int idUser: test ? 1: 0
 
-// START -----> Компонент: шаблон отображения книги в представлении
+    ModelBooks{
+        id: modelBooks
+      //  books: test ? Books.jsonModel: [{}]
+    }
+
+    SortFilterProxyModel {
+        id: booksProxyModel
+        sourceModel: modelBooks
+
+        filters: RegExpFilter {
+            id: filterProxy
+            //     roleName: "titleLower"
+            //     pattern: //textField.text.toLowerCase()
+            caseSensitivity: Qt.CaseInSensitive
+        }
+        //sorters: StringSorter { roleName: "firstName" }
+    }
+
+    // START -----> Компонент: шаблон отображения книги в представлении
     Component{
         id: delegate
 
@@ -35,10 +57,11 @@ ApplicationWindow{
             border.color: "black"
             border.width: 1
 
-            objectName: 'book_id:'+ modelData.book_id
+            //        objectName: 'book_id:'+ modelData.book_id
 
             width: mainWindow.width
-            height: visible ? imgBook.height + 10 : 0
+            //         height: visible ? imgBook.height + 10 : 0
+            height:  imgBook.height + 10
             Row{
                 x: 5
                 anchors.verticalCenter: parent.verticalCenter
@@ -51,73 +74,68 @@ ApplicationWindow{
                     //      source: "qrc:/eLibrary"
                     source:
                     {
-                        if(!modelData.photo) return "qrc:/noBook"
-                        return 'data:image/png;base64,' + modelData.photo
+                        if(model.isPhotoExist) return 'data:image/png;base64,' + model.photo
+                        return "qrc:/noBook"
                     }
                     smooth: true
 
                 }
                 Column{
+                    id: bookColumn
+
+
                     spacing: 4
                     Text{
                         color: "black"
 
-                        text: {
+                        //   width: mainWindow.width - imgBook.width - imgBook.x - 10 - btnSelectBook.width
 
+                        text: {
+                            var txt = model.title
                             var bestWidth = mainWindow.width - imgBook.width - imgBook.x - 10 - btnSelectBook.width
 
                             if(contentWidth > bestWidth)
                             {
-                                var chLength = contentWidth / modelData.title.length
+                                var chLength = contentWidth / txt.length
                                 var maxCh = bestWidth / chLength
                                 //    console.log(modelData.title, bestWidth, chLength, maxCh)
-                                return getLimitStr(modelData.title, maxCh - 3)
+                                return getLimitStr(txt, maxCh - 4)
                             }
-
-                            return modelData.title
+                            return txt
                         }
+
+                        //    wrapMode: Text.WordWrap
                         font.pointSize: 11
                     }
                     Text{
                         color: btnDownColor
-                        text: {
-                            var bestWidth = mainWindow.width - imgBook.width - imgBook.x - 10 - btnSelectBook.width
-
-                            if(contentWidth > bestWidth)
-                            {
-                                var chLength = contentWidth / modelData.author.length
-                                var maxCh = bestWidth / chLength
-                                //    console.log(modelData.title, bestWidth, chLength, maxCh)
-                                return getLimitStr(modelData.author, maxCh - 3)
-                            }
-
-                            return modelData.author
-                        }
-
+                        text: model.author
                         font.pointSize: 11
+                        wrapMode: Text.WordWrap
                     }
                     Text{
                         id: textGenre
                         color: "#b646ea"
-                        text: modelData.genre ? modelData.genre : " "
-                        font.pointSize: 10
+                        text: model.genre ? model.genre : " "
+                        font.pointSize: 11
+                        wrapMode: Text.WordWrap
                     }
                     Text{
                         id: textYear
-                        text: modelData.year_publication
+                        text: model.year_publication
                         font.pointSize: 10
                     }
                 }
             }
             Rectangle{
                 id: rectBron
-                visible: modelData.reservation_user_id > 0
+                visible: model.reservation_user_id > 0
                 width: textBron.width + 4
                 height: textBron.height + 4
                 x : parent.width - 5 - width - btnSelectBook.width
-                y: rectDelegate.height - height - rectDelegate.height*0.2
+                y: rectDelegate.height - height - rectDelegate.height*0.1
                 radius: 5
-                color: modelData.reservation_user_id == idUser ? "#33d338" : "#fb5252"
+                color: model.reservation_user_id == idUser ? "#33d338" : "#fb5252"
                 Text{
                     id: textBron
                     anchors.centerIn: parent
@@ -138,7 +156,7 @@ ApplicationWindow{
                 }
                 onClicked: {
                     itemBooks.visible = false
-                    rectBookInfo.book = modelData
+                    rectBookInfo.book = model.book
                     setReserveStatus()
                     mainWindow.status = "bookInfo"
                     rectBookInfo.visible = true
@@ -155,7 +173,7 @@ ApplicationWindow{
 
     Rectangle{
         id: rectBookInfo
-        property var book: {book_id:1}
+        property MyBook book
         anchors.fill: parent
         visible: false
         color: backgroundColor
@@ -201,7 +219,7 @@ ApplicationWindow{
             Image{
                 id: imgBookInfo
                 source: {
-             //       console.log("book_id",rectBookInfo.book.book_id)
+                    //       console.log("book_id",rectBookInfo.book.book_id)
                     if(!rectBookInfo.book.photo) return "qrc:/noBook"
                     return 'data:image/png;base64,' + rectBookInfo.book.photo
                 }
@@ -392,7 +410,7 @@ ApplicationWindow{
                 // Индикатор ожидания загрузки информации о книгах
                 BusyIndicator{
                     id: busyGetAllBooks
-                    visible: true
+                    visible: test? false: true
                     anchors.centerIn: parent
                     width: parent.width > parent.height ? parent.height*0.4 : parent.width*0.4
                     height: width
@@ -403,113 +421,20 @@ ApplicationWindow{
                 signal filteredItems(string text, int category)
 
                 onFilteredItems: {
-                    var childrenLength = listView.children[0].children.length
+                    filterProxy.pattern = text.toLowerCase()
 
-                    if(text.length == 0) // сделать все книги видимыми
+                    switch(category)
                     {
-                        for(var i = 0; i < childrenLength;++i)
-                        {
-                            // Только у компонентов книг objectName - непустая строка
-                            if(!listView.children[0].children[i].objectName)
-                            {
-                                continue
-                            }
-                           listView.children[0].children[i].visible = true
-                        }
+                    case 0:
+                        filterProxy.roleName = "titleLower"
+                        break
+                    case 1:
+                        filterProxy.roleName = "authorLower"
+                        break
+                    case 2:
+                        filterProxy.roleName = "genreLower"
+                        break
                     }
-                    else{
-                        var currentEl = 0
-                        for(i = 0; i < childrenLength;++i)
-                        {
-                         //   console.log("objectName",listView.children[0].children[i].objectName)
-                            // Только у компонентов книг objectName - непустая строка
-                            if(!listView.children[0].children[i].objectName)
-                            {
-                                continue
-                            }
-
-                            var isVisible = false
-
-                            var myTxt = ''
-                            var searchTxt = text.toLowerCase()
-
-                            switch(category)
-                            {
-                            case 0:  // название
-                                myTxt = listView.model[currentEl].title
-                                break
-                            case 1:  // автор
-                                if(listView.model[currentEl].hasOwnProperty("author"))
-                                    myTxt = listView.model[currentEl].author
-                                break
-                            case 2:  // жанр
-                                if(listView.model[currentEl].hasOwnProperty("genre"))
-                                    myTxt = listView.model[currentEl].genre
-                                break
-                            }
-                            if(myTxt.length > 0)
-                            {
-                                isVisible = (myTxt.toLowerCase().indexOf(searchTxt) !== -1)
-                            }
-                            listView.children[0].children[i].visible = isVisible
-                            ++currentEl
-                        }
-                    }
-                    return
-
-                    // Замена модели (не используется)
-
-
-//                    if(text.length == 0)
-//                    {
-//                        for(var i = 0; i < newModel.length;++i)
-//                        {
-//                            newModel[i].visible = true
-//                        }
-//                    }
-//                    return
-//                    var newModel = listView.model
-
-//                    if(text.length == 0)
-//                    {
-//                        for(var i = 0; i < newModel.length;++i)
-//                        {
-//                            newModel[i].visible = true
-//                        }
-//                    }
-//                    else{
-//                        for(i = 0; i < newModel.length;++i)
-//                        {
-//                            var isVisible = false
-
-//                            var myTxt = ''
-//                            var searchTxt = text.toLowerCase()
-
-//                            switch(category)
-//                            {
-//                            case 0:  // название
-//                                myTxt = newModel[i].title
-//                                break
-//                            case 1:  // автор
-//                                if(newModel[i].hasOwnProperty("author"))
-//                                    myTxt = newModel[i].author
-//                                break
-//                            case 2:  // жанр
-//                                if(newModel[i].hasOwnProperty("genre"))
-//                                    myTxt = newModel[i].genre
-//                                break
-//                            }
-//                            if(myTxt.length > 0)
-//                            {
-//                                isVisible = (myTxt.toLowerCase().indexOf(searchTxt) !== -1)
-//                                //      console.log("text = ", myTxt, isVisible, curI)
-//                            }
-//                            newModel[i].visible = isVisible
-//                        }
-//                    }
-//                    listView.model = newModel
-
-//                    return
                 }
 
 
@@ -697,7 +622,9 @@ ApplicationWindow{
                 }
                 anchors.fill: parent
                 //   model: test ? Books.jsonModel: []
-             //   model:[]
+                //   model:[]
+
+                model: booksProxyModel
 
 
                 delegate: delegate  // id шаблона для отображение книг
@@ -751,7 +678,7 @@ ApplicationWindow{
     Rectangle{
         id: rectStars
         anchors.fill: parent
-   //     color: "white"
+        //     color: "white"
         visible: false
 
         Rectangle{
@@ -970,7 +897,7 @@ ApplicationWindow{
         active: !test //true
 
         onStatusChanged: {
-        //    console.log("ws status = ", status)
+            //    console.log("ws status = ", status)
 
             if(status == WebSocket.Open)
             {
@@ -1015,7 +942,7 @@ ApplicationWindow{
             var main = object.main
             var result = main.result
 
-       //     console.log("ws: type = ",type)
+            //     console.log("ws: type = ",type)
             switch(type)
             {
             case Codes.Authorization:
@@ -1035,7 +962,7 @@ ApplicationWindow{
                         rowStars.countYellowStar = 5
                     }
 
-              //      console.log("idUser =",idUser)
+                    //      console.log("idUser =",idUser)
                     sendRequestGetAllBooks()
                 }
                 else
@@ -1069,20 +996,25 @@ ApplicationWindow{
                         {
                             if(main.books[i].book_id == rectBookInfo.book.book_id)
                             {
-                                rectBookInfo.book = main.books[i]
+                                rectBookInfo.book.time_unblocking = main.books[i].time_unblocking
                                 break
                             }
                         }
                         setReserveStatus()
+
                     }
 
-//                    for(i = 0; i < main.books.length; ++i)
-//                    {
-//                        main.books[i]["visible"] = true
-//                    }
+
+                    //                    for(i = 0; i < main.books.length; ++i)
+                    //                    {
+                    //                        main.books[i]["visible"] = true
+                    //                    }
                     busyGetAllBooks.visible = false
 
-                    listView.model = main.books
+                    modelBooks.books = main.books
+
+
+                    //       listView.model = main.books
 
                 }
                 break
@@ -1099,7 +1031,7 @@ ApplicationWindow{
             case Codes.Check:
                 var check = main.check
 
-         //       console.log("check = ", check)
+                //       console.log("check = ", check)
 
                 if(check == "server")
                 {
@@ -1371,7 +1303,7 @@ ApplicationWindow{
             TextInput{
                 id: inputLogin
                 anchors.fill: parent
-            //    text: "test"
+                //    text: "test"
                 //     focus: true
                 font.pixelSize: 16
                 maximumLength: 19
@@ -1397,7 +1329,7 @@ ApplicationWindow{
                 id: inputPassword
 
                 anchors.fill: parent
-       //         text: "1234"
+                //         text: "1234"
                 focus: false
                 font.pixelSize: 16
                 maximumLength: 19

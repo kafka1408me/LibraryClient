@@ -16,7 +16,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        main.cpp
+        jsonmodel.cpp \
+        main.cpp #\
+ #       mymodel.cpp
 
 RESOURCES += qml.qrc
 
@@ -32,7 +34,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-  codes.h
+  Book.h \
+  codes.h \
+  jsonmodel.h #\
+ # mymodel.h
 
 DISTFILES += \
   android/AndroidManifest.xml \
@@ -47,5 +52,7 @@ contains(ANDROID_TARGET_ARCH,armeabi-v7a) {
   ANDROID_PACKAGE_SOURCE_DIR = \
     $$PWD/android
 }
+
+include (SortFilterProxyModel-master/SortFilterProxyModel.pri)
 
 

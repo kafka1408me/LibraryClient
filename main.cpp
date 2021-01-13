@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include "codes.h"
 //#include "Colors.h"
+#include "jsonmodel.h"
 
 int main(int argc, char *argv[])
 {
@@ -16,6 +17,9 @@ int main(int argc, char *argv[])
       "Codes",                       // name in QML (does not have to match C++ name)
       "Error: only enums"            // error in case someone tries to create a MyNamespace object
     );
+
+    qmlRegisterType<JsonModel>("mymodel.Books",1,0,"ModelBooks");
+    qmlRegisterUncreatableType<Book>("mymodel.Books",1,0,"MyBook", "interface");
 
     auto input = QGuiApplication::inputMethod();
     input->setVisible(false);

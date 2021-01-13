@@ -7,5 +7,6 @@
 		<file>emptyStar.png</file>
 		<file>yellowStar.png</file>
 		<file>search.png</file>
+		<file>model.js</file>
     </qresource>
 </RCC>
